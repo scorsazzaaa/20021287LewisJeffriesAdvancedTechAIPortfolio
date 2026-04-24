@@ -1,0 +1,188 @@
+@using AIPortfolioGenerator.Models
+@using AIPortfolioGenerator.Services
+@inject PortfolioStateService StateService
+@inject AIService AIService
+
+<div class="step-content">
+    <Row>
+        <Column ColumnSize="ColumnSize.Is8.OnDesktop">
+            <div class="wizard-section">
+                <h5>AI Enhancement Options</h5>
+                <p class="section-desc">Choose how AI should enhance your portfolio</p>
+
+                <Row>
+                    <Column ColumnSize="ColumnSize.Is4.OnDesktop">
+                        <div class="wizard-section text-center" style="border-color: #2563eb;">
+                            <Icon Name="IconName.Edit" Style="font-size: 1.5rem; color: #2563eb;" />
+                            <h5 style="font-size: 0.875rem; margin-top: 0.75rem;">Content Enhancement</h5>
+                            <p style="font-size: 0.8125rem; color: #64748b; margin: 0.5rem 0;">Refine descriptions for clarity and impact</p>
+                            <div class="form-check form-switch d-flex justify-content-center">
+                                <input class="form-check-input" type="checkbox" @bind="options.ContentEnhancement" style="width: 3rem; height: 1.5rem;">
+                            </div>
+                        </div>
+                    </Column>
+
+                    <Column ColumnSize="ColumnSize.Is4.OnDesktop">
+                        <div class="wizard-section text-center" style="border-color: #059669;">
+                            <Icon Name="IconName.Dashboard" Style="font-size: 1.5rem; color: #059669;" />
+                            <h5 style="font-size: 0.875rem; margin-top: 0.75rem;">Smart Skills</h5>
+                            <p style="font-size: 0.8125rem; color: #64748b; margin: 0.5rem 0;">AI-suggested skills from your projects</p>
+                            <div class="form-check form-switch d-flex justify-content-center">
+                                <input class="form-check-input" type="checkbox" @bind="options.SkillSuggestions" style="width: 3rem; height: 1.5rem;">
+                            </div>
+                        </div>
+                    </Column>
+
+                    <Column ColumnSize="ColumnSize.Is4.OnDesktop">
+                        <div class="wizard-section text-center" style="border-color: #0284c7;">
+                            <Icon Name="IconName.Palette" Style="font-size: 1.5rem; color: #0284c7;" />
+                            <h5 style="font-size: 0.875rem; margin-top: 0.75rem;">Layout Optimization</h5>
+                            <p style="font-size: 0.8125rem; color: #64748b; margin: 0.5rem 0;">Best layout based on content type</p>
+                            <div class="form-check form-switch d-flex justify-content-center">
+                                <input class="form-check-input" type="checkbox" @bind="options.LayoutOptimization" style="width: 3rem; height: 1.5rem;">
+                            </div>
+                        </div>
+                    </Column>
+                </Row>
+
+                <div class="text-center mt-4">
+                    <Button Color="Color.Primary" Size="Size.Large" Clicked="GenerateSuggestions" Loading="isGenerating"
+                              Disabled="!AnyOptionSelected">
+                        Generate Suggestions
+                    </Button>
+
+                    @if (!AnyOptionSelected)
+                    {
+                        <p style="color: #94a3b8; font-size: 0.875rem; margin-top: 0.5rem;">Enable at least one option above</p>
+                    }
+                </div>
+            </div>
+        </Column>
+
+        <Column ColumnSize="ColumnSize.Is4.OnDesktop">
+            <div class="wizard-section" style="background: #0f172a; color: #e2e8f0;">
+                <div class="d-flex align-items-center mb-3">
+                    <Icon Name="IconName.User" Margin="Margin.Is2.FromEnd" />
+                    <h5 style="margin: 0; color: #e2e8f0;">AI Suggestions</h5>
+                </div>
+
+                @if (suggestions == null && !isGenerating)
+                {
+                    <div class="text-center p-4">
+                        <Icon Name="IconName.Lightbulb" Style="font-size: 2.5rem; opacity: 0.4; color: #94a3b8;" />
+                        <p style="color: #94a3b8; margin-top: 0.75rem; font-size: 0.875rem;">Click "Generate Suggestions" to get personalised recommendations</p>
+                    </div>
+                }
+                else if (isGenerating)
+                {
+                    <div class="text-center p-4">
+                        <Progress Margin="Margin.Is3.FromBottom" Animated="true" Striped="true" Value="100" />
+                        <p style="color: #94a3b8;">Analysing your portfolio...</p>
+                    </div>
+                }
+                else if (suggestions != null)
+                {
+                    @if (options.ContentEnhancement)
+                    {
+                        <Alert Color="Color.Info" Margin="Margin.Is3.FromBottom">
+                            <AlertMessage>Content Tip</AlertMessage>
+                            <AlertDescription>@suggestions.Content</AlertDescription>
+                        </Alert>
+                    }
+
+                    @if (options.SkillSuggestions && suggestions.SuggestedSkills.Any())
+                    {
+                        <div class="mb-4">
+                            <h5 style="font-size: 0.875rem; color: #e2e8f0;">Suggested Skills</h5>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                @foreach (var skill in suggestions.SuggestedSkills)
+                                {
+                                    <Badge Color="Color.Success" Padding="Padding.Is2">@skill</Badge>
+                                }
+                            </div>
+                            @if (!appliedSkills)
+                            {
+                                <Button Color="Color.Success" Size="Size.Small" Margin="Margin.Is3.FromTop" Clicked="ApplySkills">
+                                    Add to Skills
+                                </Button>
+                            }
+                        </div>
+                    }
+
+                    @if (options.LayoutOptimization)
+                    {
+                        <Alert Color="Color.Primary">
+                            <AlertMessage>Layout Recommendation</AlertMessage>
+                            <AlertDescription>
+                                Based on your @(StateService.Data.Projects.Count) projects, AI recommends a @suggestions.LayoutRecommendation layout.
+                                @if (!appliedLayout)
+                                {
+                                    <Button Color="Color.Primary" Size="Size.Small" Margin="Margin.Is2.FromTop" Clicked="ApplyLayout">
+                                        Apply Layout
+                                    </Button>
+                                }
+                            </AlertDescription>
+                        </Alert>
+                    }
+                }
+            </div>
+        </Column>
+    </Row>
+</div>
+
+@code {
+    [Parameter] public EventCallback<bool> OnValidationChanged { get; set; }
+
+    private EnhancementOptions options = new();
+    private AISuggestion? suggestions;
+    private bool isGenerating;
+    private bool appliedSkills;
+    private bool appliedLayout;
+
+    private bool AnyOptionSelected => options.ContentEnhancement || options.SkillSuggestions || options.LayoutOptimization;
+
+    private async Task GenerateSuggestions()
+    {
+        isGenerating = true;
+        suggestions = null;
+        appliedSkills = false;
+        appliedLayout = false;
+
+        suggestions = await AIService.GetComprehensiveSuggestionsAsync(StateService.Data);
+
+        isGenerating = false;
+        StateHasChanged();
+    }
+
+    private void ApplySkills()
+    {
+        if (suggestions?.SuggestedSkills != null)
+        {
+            StateService.SetSkills(suggestions.SuggestedSkills);
+            appliedSkills = true;
+        }
+    }
+
+    private void ApplyLayout()
+    {
+        if (!string.IsNullOrEmpty(suggestions?.LayoutRecommendation))
+        {
+            StateService.SetLayout(suggestions.LayoutRecommendation);
+            appliedLayout = true;
+        }
+    }
+
+    public async Task<bool> ValidateAndSave()
+    {
+        StateService.MarkAIEnhanced();
+        await OnValidationChanged.InvokeAsync(true);
+        return true;
+    }
+
+    public class EnhancementOptions
+    {
+        public bool ContentEnhancement { get; set; } = true;
+        public bool SkillSuggestions { get; set; } = true;
+        public bool LayoutOptimization { get; set; } = true;
+    }
+}

@@ -1,0 +1,229 @@
+@using AIPortfolioGenerator.Models
+@using AIPortfolioGenerator.Services
+@inject PortfolioStateService StateService
+@inject AIService AIService
+@inject IJSRuntime JSRuntime
+
+<div class="step-content">
+    <div class="wizard-section">
+        <h5>Basic Information</h5>
+        <p class="section-desc">Tell us about yourself</p>
+        <div class="form-content">
+            <div class="mb-3">
+                <label class="form-label">Full Name *</label>
+                <input type="text" class="form-control" value="@formData.FullName" @oninput="OnFullNameChanged" placeholder="John Doe" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Professional Title *</label>
+                <input type="text" class="form-control" value="@formData.Title" @oninput="OnTitleChanged" placeholder="Full Stack Developer" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" @bind="formData.Email" placeholder="john@example.com" />
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">GitHub URL</label>
+                    <input type="url" class="form-control" @bind="formData.GitHubUrl" placeholder="https://github.com/username" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">LinkedIn URL</label>
+                    <input type="url" class="form-control" @bind="formData.LinkedInUrl" placeholder="https://linkedin.com/in/username" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">
+                    About You
+                    <Button Color="Color.Primary" Size="Size.Small" Clicked="GenerateAboutWithAI" Loading="isGeneratingAbout" Margin="Margin.Is2.FromStart">
+                        AI Generate
+                    </Button>
+                </label>
+                <textarea class="form-control" @bind="formData.About" rows="4" placeholder="Tell us about yourself..."></textarea>
+
+                @if (!string.IsNullOrEmpty(aiAboutSuggestion))
+                {
+                    <Alert Color="Color.Info" Margin="Margin.Is3.FromTop">
+                        <AlertMessage>AI Suggestion</AlertMessage>
+                        <AlertDescription>
+                            @aiAboutSuggestion
+                            <div class="mt-2">
+                                <Button Color="Color.Success" Size="Size.Small" Clicked="UseAISuggestion">Use This</Button>
+                                <Button Color="Color.Light" Size="Size.Small" Clicked="() => aiAboutSuggestion = null">Dismiss</Button>
+                            </div>
+                        </AlertDescription>
+                    </Alert>
+                }
+            </div>
+
+            <hr style="border-color: #e2e8f0; margin: 1.5rem 0;" />
+
+            <div class="mb-3">
+                <label class="form-label">Profile Picture</label>
+                <div class="d-flex align-items-center gap-3">
+                    @if (!string.IsNullOrEmpty(profileImagePreview))
+                    {
+                        <img src="@profileImagePreview" alt="Profile Preview" style="width: 80px; height: 80px; object-fit: cover; border-radius: 50%; border: 2px solid #e2e8f0;" />
+                    }
+                    else
+                    {
+                        <div style="width: 80px; height: 80px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px dashed #d1d5db;">
+                            <Icon Name="IconName.User" Style="font-size: 1.5rem; color: #94a3b8;" />
+                        </div>
+                    }
+                    <div>
+                        <InputFile OnChange="OnProfileImageSelected" accept=".jpg,.jpeg,.png,.gif" class="form-control" />
+                        <small class="text-muted">JPG, PNG, GIF up to 2MB</small>
+                        @if (!string.IsNullOrEmpty(profileImagePreview))
+                        {
+                            <div class="mt-2">
+                                <Button Color="Color.Danger" Size="Size.Small" Clicked="RemoveProfileImage">
+                                    Remove
+                                </Button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<bool> OnValidationChanged { get; set; }
+
+    private BasicInfoForm formData = new();
+    private string? aiAboutSuggestion;
+    private bool isGeneratingAbout;
+    private string? profileImagePreview;
+
+    protected override void OnInitialized()
+    {
+        formData.FullName = StateService.Data.FullName;
+        formData.Title = StateService.Data.Title;
+        formData.Email = StateService.Data.Email;
+        formData.GitHubUrl = StateService.Data.GitHubUrl;
+        formData.LinkedInUrl = StateService.Data.LinkedInUrl;
+        formData.About = StateService.Data.About;
+        profileImagePreview = StateService.Data.ProfileImage;
+    }
+
+    private async Task GenerateAboutWithAI()
+    {
+        if (string.IsNullOrWhiteSpace(formData.FullName) || string.IsNullOrWhiteSpace(formData.Title))
+        {
+            aiAboutSuggestion = "Please enter your name and title first.";
+            StateHasChanged();
+            return;
+        }
+
+        isGeneratingAbout = true;
+        aiAboutSuggestion = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await AIService.GenerateAboutAsync(
+                formData.FullName,
+                formData.Title,
+                StateService.Data.Projects);
+
+            if (!string.IsNullOrEmpty(result) && !result.StartsWith("Ollama unavailable") && !result.StartsWith("Could not connect") && !result.StartsWith("Error"))
+            {
+                formData.About = result;
+                aiAboutSuggestion = null;
+            }
+            else
+            {
+                aiAboutSuggestion = result;
+            }
+        }
+        catch (Exception ex)
+        {
+            aiAboutSuggestion = $"Error: {ex.Message}";
+        }
+
+        isGeneratingAbout = false;
+        StateHasChanged();
+    }
+
+    private void UseAISuggestion()
+    {
+        if (aiAboutSuggestion != null)
+        {
+            formData.About = aiAboutSuggestion;
+            aiAboutSuggestion = null;
+            StateHasChanged();
+        }
+    }
+
+    private void OnFullNameChanged(ChangeEventArgs e)
+    {
+        formData.FullName = e.Value?.ToString() ?? "";
+        OnValidationChanged.InvokeAsync(true);
+    }
+
+    private void OnTitleChanged(ChangeEventArgs e)
+    {
+        formData.Title = e.Value?.ToString() ?? "";
+        OnValidationChanged.InvokeAsync(true);
+    }
+
+    private async Task OnProfileImageSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        if (file.Size > 2 * 1024 * 1024)
+        {
+            return;
+        }
+
+        using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        var base64 = Convert.ToBase64String(ms.ToArray());
+        profileImagePreview = $"data:{file.ContentType};base64,{base64}";
+        StateService.SetProfileImage(profileImagePreview);
+        StateHasChanged();
+    }
+
+    private void RemoveProfileImage()
+    {
+        profileImagePreview = null;
+        StateService.SetProfileImage("");
+        StateHasChanged();
+    }
+
+    public async Task<bool> ValidateAndSave()
+    {
+        var isValid = !string.IsNullOrWhiteSpace(formData.FullName) && !string.IsNullOrWhiteSpace(formData.Title);
+
+        if (isValid)
+        {
+            StateService.UpdateBasicInfo(
+                formData.FullName,
+                formData.Title,
+                formData.Email,
+                formData.GitHubUrl,
+                formData.LinkedInUrl,
+                formData.About);
+        }
+
+        await OnValidationChanged.InvokeAsync(isValid);
+        return isValid;
+    }
+
+    public class BasicInfoForm
+    {
+        public string FullName { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string GitHubUrl { get; set; } = "";
+        public string LinkedInUrl { get; set; } = "";
+        public string About { get; set; } = "";
+    }
+}

@@ -1,0 +1,266 @@
+@using AIPortfolioGenerator.Models
+@using AIPortfolioGenerator.Services
+@inject PortfolioStateService StateService
+@inject AIService AIService
+
+<div class="step-content">
+    <div class="wizard-section">
+        <h5>Choose Your Theme</h5>
+        <p class="section-desc">Select a theme or let AI generate one based on your preferences</p>
+
+        <!-- AI Theme Generator -->
+        <div class="mb-4">
+            <label class="form-label">Describe your desired vibe</label>
+            <div class="d-flex gap-2">
+                <input type="text" class="form-control" @bind="moodInput" placeholder="e.g., minimal, professional, creative, bold..." />
+                <Button Color="Color.Primary" Clicked="GenerateAITheme" Loading="isGeneratingTheme"
+                          Disabled="string.IsNullOrWhiteSpace(moodInput)" Style="white-space: nowrap;">
+                    AI Generate
+                </Button>
+            </div>
+        </div>
+
+        @if (aiGeneratedTheme != null)
+        {
+            <div class="ai-theme-result mb-4 p-3" style="border: 2px solid #059669; border-radius: 10px; background: #f0fdf4;">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 style="margin: 0; color: #059669;">AI Generated: @aiGeneratedTheme.Name</h6>
+                        <p style="margin: 0.25rem 0 0; color: #64748b; font-size: 0.875rem;">@aiGeneratedTheme.Description</p>
+                    </div>
+                    <Button Color="Color.Success" Clicked="ApplyAITheme">
+                        Apply Theme
+                    </Button>
+                </div>
+                <div class="d-flex gap-2 mt-2">
+                    <div style="width: 50px; height: 50px; background: @aiGeneratedTheme.Colors.Primary; border-radius: 8px;" title="Primary"></div>
+                    <div style="width: 50px; height: 50px; background: @aiGeneratedTheme.Colors.Secondary; border-radius: 8px;" title="Secondary"></div>
+                    <div style="width: 50px; height: 50px; background: @aiGeneratedTheme.Colors.Accent; border-radius: 8px;" title="Accent"></div>
+                    <div style="width: 50px; height: 50px; background: @aiGeneratedTheme.Colors.Background; border: 2px solid #ddd; border-radius: 8px;" title="Background"></div>
+                    <div style="width: 50px; height: 50px; background: @aiGeneratedTheme.Colors.Text; border: 2px solid #ddd; border-radius: 8px;" title="Text"></div>
+                </div>
+            </div>
+        }
+
+        <hr style="border-color: #e2e8f0;" />
+
+        <!-- Predefined Themes -->
+        <h6 style="font-weight: 600; margin: 1rem 0;">Or choose a preset</h6>
+
+        <Row>
+            @foreach (var theme in predefinedThemes)
+            {
+                var currentTheme = theme;
+                <Column ColumnSize="ColumnSize.Is3.OnDesktop" Margin="Margin.Is3.OnAll">
+                    <div @onclick="() => SelectTheme(currentTheme.Id)" class="theme-card wizard-section text-center" style="padding: 1.25rem; cursor: pointer; @(selectedTheme == theme.Id ? "border-color: #2563eb;" : "")">
+                        <div class="theme-preview d-flex justify-content-center gap-2 mb-3">
+                            <div style="width: 30px; height: 30px; background: @theme.Colors.Primary; border-radius: 6px;"></div>
+                            <div style="width: 30px; height: 30px; background: @theme.Colors.Secondary; border-radius: 6px;"></div>
+                            <div style="width: 30px; height: 30px; background: @theme.Colors.Accent; border-radius: 6px;"></div>
+                        </div>
+
+                        <h6 style="font-size: 0.9375rem; font-weight: 600; margin-bottom: 0.25rem;">@theme.Name</h6>
+                        <p style="font-size: 0.8125rem; color: #64748b; margin: 0;">@theme.Description</p>
+
+                        @if (selectedTheme == theme.Id)
+                        {
+                            <Badge Color="Color.Primary" Margin="Margin.Is2.FromTop">Selected</Badge>
+                        }
+                    </div>
+                </Column>
+            }
+        </Row>
+
+        <hr style="border-color: #e2e8f0;" />
+
+        <!-- Color Customizer -->
+        <h6 style="font-weight: 600; margin: 1rem 0;">Customise colours</h6>
+
+        <Row>
+            <Column ColumnSize="ColumnSize.Is3.OnDesktop">
+                <div class="mb-3">
+                    <label class="form-label">Primary</label>
+                    <input type="color" class="form-control form-control-color w-100" @bind="customColors.Primary" />
+                </div>
+            </Column>
+            <Column ColumnSize="ColumnSize.Is3.OnDesktop">
+                <div class="mb-3">
+                    <label class="form-label">Secondary</label>
+                    <input type="color" class="form-control form-control-color w-100" @bind="customColors.Secondary" />
+                </div>
+            </Column>
+            <Column ColumnSize="ColumnSize.Is3.OnDesktop">
+                <div class="mb-3">
+                    <label class="form-label">Background</label>
+                    <input type="color" class="form-control form-control-color w-100" @bind="customColors.Background" />
+                </div>
+            </Column>
+            <Column ColumnSize="ColumnSize.Is3.OnDesktop">
+                <div class="mb-3">
+                    <label class="form-label">Text</label>
+                    <input type="color" class="form-control form-control-color w-100" @bind="customColors.Text" />
+                </div>
+            </Column>
+        </Row>
+
+        <div class="mb-3">
+            <label class="form-label">Accent Colour</label>
+            <input type="color" class="form-control form-control-color" @bind="customColors.Accent" />
+        </div>
+
+        <!-- Live Preview of Theme -->
+        <div class="wizard-section" style="border-color: #2563eb; margin-top: 1.5rem;">
+            <h5>Live Theme Preview</h5>
+            <div class="theme-preview-box mt-3" Style="@($"background: {customColors.Background}; padding: 1rem; border-radius: 8px;")">
+                <div class="preview-header p-3 rounded mb-3"
+                     style="background: @customColors.Primary; color: white;">
+                    <strong style="font-size: 1.125rem;">John Doe</strong>
+                    <p style="color: rgba(255,255,255,0.85); margin: 0.25rem 0 0;">Software Developer</p>
+                </div>
+
+                <div class="preview-content p-3"
+                     style="color: @customColors.Text;">
+                    <p style="margin: 0;">
+                        Welcome to my portfolio showcasing my best work.
+                    </p>
+
+                    <div class="d-flex gap-2 mt-3">
+                        <span class="preview-badge px-3 py-1 rounded"
+                              style="background: @customColors.Secondary; color: white;">React</span>
+                        <span class="preview-badge px-3 py-1 rounded"
+                              style="background: @customColors.Accent; color: white;">Node.js</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<bool> OnValidationChanged { get; set; }
+
+    private string selectedTheme = "minimal";
+    private string moodInput = "";
+    private ThemeOption? aiGeneratedTheme;
+    private bool isGeneratingTheme;
+    private AIPortfolioGenerator.Models.ThemeColors customColors = new();
+
+    private List<ThemeOption> predefinedThemes = new()
+    {
+        new()
+        {
+            Id = "minimal",
+            Name = "Minimal",
+            Description = "Clean, spacious, professional",
+            Colors = new AIPortfolioGenerator.Models.ThemeColors { Primary = "#2d3748", Secondary = "#718096", Background = "#ffffff", Text = "#1a202c", Accent = "#3182ce" }
+        },
+        new()
+        {
+            Id = "creative",
+            Name = "Creative",
+            Description = "Bold colors, dynamic",
+            Colors = new AIPortfolioGenerator.Models.ThemeColors { Primary = "#6366f1", Secondary = "#ec4899", Background = "#0f172a", Text = "#f8fafc", Accent = "#f59e0b" }
+        },
+        new()
+        {
+            Id = "dark",
+            Name = "Dark Mode",
+            Description = "Sleek, developer-focused",
+            Colors = new AIPortfolioGenerator.Models.ThemeColors { Primary = "#3b82f6", Secondary = "#6366f1", Background = "#111827", Text = "#f3f4f6", Accent = "#f97316" }
+        },
+        new()
+        {
+            Id = "nature",
+            Name = "Nature",
+            Description = "Organic, calming, earthy",
+            Colors = new AIPortfolioGenerator.Models.ThemeColors { Primary = "#059669", Secondary = "#0d9488", Background = "#f0fdf4", Text = "#14532d", Accent = "#84cc16" }
+        }
+    };
+
+    protected override void OnInitialized()
+    {
+        selectedTheme = StateService.Data.SelectedTheme;
+        customColors = new AIPortfolioGenerator.Models.ThemeColors
+        {
+            Primary = StateService.Data.CustomColors.Primary,
+            Secondary = StateService.Data.CustomColors.Secondary,
+            Background = StateService.Data.CustomColors.Background,
+            Text = StateService.Data.CustomColors.Text,
+            Accent = StateService.Data.CustomColors.Accent
+        };
+
+        if (customColors.Primary == "#6366f1")
+        {
+            var theme = predefinedThemes.FirstOrDefault(t => t.Id == selectedTheme);
+            if (theme != null)
+            {
+                customColors = new AIPortfolioGenerator.Models.ThemeColors
+                {
+                    Primary = theme.Colors.Primary,
+                    Secondary = theme.Colors.Secondary,
+                    Background = theme.Colors.Background,
+                    Text = theme.Colors.Text,
+                    Accent = theme.Colors.Accent
+                };
+            }
+        }
+    }
+
+    private void SelectTheme(string themeId)
+    {
+        selectedTheme = themeId;
+        var theme = predefinedThemes.FirstOrDefault(t => t.Id == themeId);
+        if (theme != null)
+        {
+            customColors = new AIPortfolioGenerator.Models.ThemeColors
+            {
+                Primary = theme.Colors.Primary,
+                Secondary = theme.Colors.Secondary,
+                Background = theme.Colors.Background,
+                Text = theme.Colors.Text,
+                Accent = theme.Colors.Accent
+            };
+        }
+        aiGeneratedTheme = null;
+    }
+
+    private async Task GenerateAITheme()
+    {
+        if (string.IsNullOrWhiteSpace(moodInput))
+        {
+            return;
+        }
+
+        isGeneratingTheme = true;
+        aiGeneratedTheme = null;
+
+        try
+        {
+            aiGeneratedTheme = await AIService.GenerateThemeAsync(moodInput);
+        }
+        catch
+        {
+        }
+
+        isGeneratingTheme = false;
+        StateHasChanged();
+    }
+
+    private void ApplyAITheme()
+    {
+        if (aiGeneratedTheme != null)
+        {
+            selectedTheme = aiGeneratedTheme.Id;
+            customColors = aiGeneratedTheme.Colors;
+            aiGeneratedTheme = null;
+            StateHasChanged();
+        }
+    }
+
+    public async Task<bool> ValidateAndSave()
+    {
+        StateService.SetTheme(selectedTheme, customColors);
+        await OnValidationChanged.InvokeAsync(true);
+        return true;
+    }
+}

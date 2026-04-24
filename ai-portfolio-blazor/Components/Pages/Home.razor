@@ -1,0 +1,162 @@
+@page "/"
+@rendermode InteractiveServer
+@using AIPortfolioGenerator.Components.Steps
+@using AIPortfolioGenerator.Services
+@inject PortfolioStateService StateService
+
+<PageTitle>Portfolio Generator</PageTitle>
+
+<div class="home-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>Portfolio Generator</h1>
+        <p>Build a portfolio site in minutes. Add your info, pick a theme, and export a ready-to-deploy HTML file.</p>
+    </div>
+
+    <!-- Wizard -->
+    <div class="wizard-progress">
+            @for (int i = 0; i < steps.Length; i++)
+            {
+                var stepIndex = i;
+                var isActive = currentStep == stepIndex;
+                var isCompleted = currentStep > stepIndex;
+
+                <div class="progress-step @(isActive ? "active" : "") @(isCompleted ? "completed" : "")"
+                     @onclick="() => GoToStep(stepIndex)"
+                     style="cursor: @(isCompleted ? "pointer" : "default")">
+                    <div class="step-circle">
+                        @if (isCompleted)
+                        {
+                            <Icon Name="IconName.Check" />
+                        }
+                        else
+                        {
+                            @((stepIndex + 1).ToString())
+                        }
+                    </div>
+                    <div class="step-label">@steps[i]</div>
+                </div>
+
+                @if (i < steps.Length - 1)
+                {
+                    <div class="progress-line @(currentStep > i ? "completed" : "")"></div>
+                }
+            }
+        </div>
+
+        <!-- Step Content -->
+        <div class="step-container">
+            @switch (currentStep)
+            {
+                case 0:
+                    <BasicInfoStep @ref="basicInfoStep" OnValidationChanged="OnValidationChanged" />
+                    break;
+                case 1:
+                    <ProjectsStep @ref="projectsStep" OnValidationChanged="OnValidationChanged" />
+                    break;
+                case 2:
+                    <AIEnhancementStep @ref="aiEnhancementStep" OnValidationChanged="OnValidationChanged" />
+                    break;
+                case 3:
+                    <ThemeSelectionStep @ref="themeSelectionStep" OnValidationChanged="OnValidationChanged" />
+                    break;
+                case 4:
+                    <PreviewStep @ref="previewStep" OnValidationChanged="OnValidationChanged" />
+                    break;
+                case 5:
+                    <ExportStep @ref="exportStep" OnValidationChanged="OnValidationChanged" />
+                    break;
+            }
+        </div>
+
+        <!-- Navigation -->
+        <div class="wizard-navigation d-flex justify-content-between align-items-center">
+            <Button Color="Color.Light" Clicked="PreviousStep" Disabled="currentStep == 0"
+                    Size="Size.Large" Class="px-4">
+                <Icon Name="IconName.ArrowLeft" /> Back
+            </Button>
+
+            <div class="step-indicator">
+                Step @(currentStep + 1) of @steps.Length
+            </div>
+
+            @if (currentStep < steps.Length - 1)
+            {
+                <Button Color="Color.Primary" Clicked="NextStep" Loading="isValidating"
+                        Size="Size.Large" Class="px-4"
+                        Disabled="!isCurrentStepValid">
+                    Continue <Icon Name="IconName.ArrowRight" />
+                </Button>
+            }
+            else
+            {
+                <Button Color="Color.Success" Clicked="FinishWizard" Size="Size.Large" Class="px-4"
+                        Disabled="!isCurrentStepValid">
+                    <Icon Name="IconName.Check" /> Complete
+                </Button>
+            }
+        </div>
+</div>
+
+@code {
+    private string[] steps = new[] { "Info", "Projects", "AI", "Theme", "Preview", "Export" };
+    private int currentStep = 0;
+    private bool isCurrentStepValid = true;
+    private bool isValidating;
+
+    private BasicInfoStep? basicInfoStep;
+    private ProjectsStep? projectsStep;
+    private AIEnhancementStep? aiEnhancementStep;
+    private ThemeSelectionStep? themeSelectionStep;
+    private PreviewStep? previewStep;
+    private ExportStep? exportStep;
+
+    private void OnValidationChanged(bool isValid)
+    {
+        isCurrentStepValid = isValid;
+        StateHasChanged();
+    }
+
+    private async Task NextStep()
+    {
+        isValidating = true;
+
+        bool stepValid = currentStep switch
+        {
+            0 => await (basicInfoStep?.ValidateAndSave() ?? Task.FromResult(false)),
+            1 => await (projectsStep?.ValidateAndSave() ?? Task.FromResult(false)),
+            2 => await (aiEnhancementStep?.ValidateAndSave() ?? Task.FromResult(false)),
+            3 => await (themeSelectionStep?.ValidateAndSave() ?? Task.FromResult(false)),
+            4 => await (previewStep?.ValidateAndSave() ?? Task.FromResult(false)),
+            5 => await (exportStep?.ValidateAndSave() ?? Task.FromResult(false)),
+            _ => true
+        };
+
+        if (stepValid && currentStep < steps.Length - 1)
+        {
+            currentStep++;
+        }
+
+        isValidating = false;
+    }
+
+    private void PreviousStep()
+    {
+        if (currentStep > 0)
+        {
+            currentStep--;
+        }
+    }
+
+    private void GoToStep(int step)
+    {
+        if (step < currentStep)
+        {
+            currentStep = step;
+        }
+    }
+
+    private void FinishWizard()
+    {
+    }
+}

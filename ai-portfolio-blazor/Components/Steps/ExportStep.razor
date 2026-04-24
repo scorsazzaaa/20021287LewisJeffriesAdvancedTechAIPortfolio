@@ -1,0 +1,295 @@
+@using AIPortfolioGenerator.Models
+@using AIPortfolioGenerator.Services
+@inject PortfolioStateService StateService
+@inject IJSRuntime JSRuntime
+
+<div class="step-content">
+    <Row>
+        <Column ColumnSize="ColumnSize.Is4.OnDesktop">
+            <div class="wizard-section text-center" style="padding: 2rem;">
+                <div class="export-icon mb-3">
+                    <Icon Name="IconName.File" Style="font-size: 2.5rem; color: #2563eb;" />
+                </div>
+                <h5>Static HTML</h5>
+                <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1rem;">Download as a complete HTML file ready to deploy</p>
+                <Button Color="Color.Primary" Size="Size.Large" Clicked="ExportHTML" Loading="isExporting">Download HTML</Button>
+            </div>
+        </Column>
+
+        <Column ColumnSize="ColumnSize.Is4.OnDesktop">
+            <div class="wizard-section text-center" style="padding: 2rem;">
+                <div class="export-icon mb-3">
+                    <Icon Name="IconName.Clipboard" Style="font-size: 2.5rem; color: #059669;" />
+                </div>
+                <h5>Copy Code</h5>
+                <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1rem;">Copy the source code for your own project</p>
+                <Button Color="Color.Success" Size="Size.Large" Clicked="ShowCodeModal">View Code</Button>
+            </div>
+        </Column>
+
+        <Column ColumnSize="ColumnSize.Is4.OnDesktop">
+            <div class="wizard-section text-center" style="padding: 2rem;">
+                <div class="export-icon mb-3">
+                    <Icon Name="IconName.Cloud" Style="font-size: 2.5rem; color: #0284c7;" />
+                </div>
+                <h5>Deploy Guide</h5>
+                <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1rem;">Instructions for deploying to popular platforms</p>
+                <Button Color="Color.Info" Size="Size.Large" Clicked="ShowDeployGuide">View Guide</Button>
+            </div>
+        </Column>
+    </Row>
+
+    <div class="wizard-section" style="margin-top: 1.5rem;">
+        <h5>What's Included</h5>
+        <Row>
+            <Column ColumnSize="ColumnSize.Is6.OnDesktop">
+                <ListGroup Flush="true">
+                    <ListGroupItem>
+                        <Icon Name="IconName.Check" TextColor="TextColor.Success" />
+                        <strong>@(StateService.Data.Projects.Count)</strong> Projects
+                    </ListGroupItem>
+                    <ListGroupItem>
+                        <Icon Name="IconName.Check" TextColor="TextColor.Success" />
+                        <strong>@(StateService.Data.Skills.Count)</strong> Skills
+                    </ListGroupItem>
+                    <ListGroupItem>
+                        <Icon Name="IconName.Check" TextColor="TextColor.Success" />
+                        Custom theme
+                    </ListGroupItem>
+                </ListGroup>
+            </Column>
+            <Column ColumnSize="ColumnSize.Is6.OnDesktop">
+                <ListGroup Flush="true">
+                    <ListGroupItem>
+                        <Icon Name="IconName.Check" TextColor="TextColor.Success" />
+                        Responsive Design
+                    </ListGroupItem>
+                    <ListGroupItem>
+                        <Icon Name="IconName.Check" TextColor="TextColor.Success" />
+                        SEO Optimised
+                    </ListGroupItem>
+                    <ListGroupItem>
+                        <Icon Name="IconName.Check" TextColor="TextColor.Success" />
+                        @if (StateService.Data.AIEnhanced)
+                        {
+                            <Badge Color="Color.Success">AI Enhanced</Badge>
+                        }
+                        else
+                        {
+                            <span>Manual Creation</span>
+                        }
+                    </ListGroupItem>
+                </ListGroup>
+            </Column>
+        </Row>
+    </div>
+
+    <!-- Code Modal -->
+    <Modal @ref="codeModal" Size="ModalSize.ExtraLarge">
+        <ModalContent Centered="true">
+            <ModalHeader>
+                <ModalTitle>Portfolio Source Code</ModalTitle>
+                <CloseButton Clicked="() => codeModal.Hide()" />
+            </ModalHeader>
+            <ModalBody>
+                <textarea readonly style="width: 100%; height: 500px; font-family: monospace;">@generatedCode</textarea>
+            </ModalBody>
+            <ModalFooter>
+                <Button Color="Color.Secondary" Clicked="() => codeModal.Hide()">Close</Button>
+                <Button Color="Color.Primary" Clicked="CopyCodeToClipboard">Copy to Clipboard</Button>
+            </ModalFooter>
+        </ModalContent>
+    </Modal>
+
+    <!-- Deploy Guide Modal -->
+    <Modal @ref="deployModal" Size="ModalSize.Large">
+        <ModalContent Centered="true">
+            <ModalHeader>
+                <ModalTitle>Deployment Guide</ModalTitle>
+                <CloseButton Clicked="() => deployModal.Hide()" />
+            </ModalHeader>
+            <ModalBody>
+                <Tabs @bind-SelectedTab="selectedDeployTab">
+                    <Items>
+                        <Tab Name="netlify">Netlify</Tab>
+                        <Tab Name="vercel">Vercel</Tab>
+                        <Tab Name="github">GitHub Pages</Tab>
+                    </Items>
+                    <Content>
+                        <TabPanel Name="netlify">
+                            <Heading Size="HeadingSize.Is5">Deploy to Netlify</Heading>
+                            <ListGroup Numbered="true">
+                                <ListGroupItem>Download your portfolio HTML file</ListGroupItem>
+                                <ListGroupItem>Go to <strong>netlify.com</strong> and sign up/login</ListGroupItem>
+                                <ListGroupItem>Drag and drop your HTML file onto the deploy area</ListGroupItem>
+                                <ListGroupItem>Your site will be live in seconds</ListGroupItem>
+                            </ListGroup>
+                        </TabPanel>
+
+                        <TabPanel Name="vercel">
+                            <Heading Size="HeadingSize.Is5">Deploy to Vercel</Heading>
+                            <ListGroup Numbered="true">
+                                <ListGroupItem>Download your portfolio HTML file</ListGroupItem>
+                                <ListGroupItem>Go to <strong>vercel.com</strong> and sign up/login</ListGroupItem>
+                                <ListGroupItem>Click "Add New..." → "Project"</ListGroupItem>
+                                <ListGroupItem>Get a free vercel.app domain instantly</ListGroupItem>
+                            </ListGroup>
+                        </TabPanel>
+
+                        <TabPanel Name="github">
+                            <Heading Size="HeadingSize.Is5">Deploy to GitHub Pages</Heading>
+                            <ListGroup Numbered="true">
+                                <ListGroupItem>Create a GitHub repository named <strong>yourusername.github.io</strong></ListGroupItem>
+                                <ListGroupItem>Upload your index.html file</ListGroupItem>
+                                <ListGroupItem>Go to Settings → Pages</ListGroupItem>
+                                <ListGroupItem>Your site will be live at <strong>https://yourusername.github.io</strong></ListGroupItem>
+                            </ListGroup>
+                        </TabPanel>
+                    </Content>
+                </Tabs>
+            </ModalBody>
+        </ModalContent>
+    </Modal>
+</div>
+
+@code {
+    [Parameter] public EventCallback<bool> OnValidationChanged { get; set; }
+
+    private Modal codeModal = null!;
+    private Modal deployModal = null!;
+    private string generatedCode = "";
+    private string selectedDeployTab = "netlify";
+    private bool isExporting;
+
+    private async Task ExportHTML()
+    {
+        isExporting = true;
+
+        generatedCode = GeneratePortfolioHTML();
+
+        await JSRuntime.InvokeVoidAsync("eval", $@"
+            const element = document.createElement('a');
+            const file = new Blob([`{generatedCode.Replace("`", "\\`")}`], {{type: 'text/html'}});
+            element.href = URL.createObjectURL(file);
+            element.download = 'portfolio.html';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        ");
+
+        isExporting = false;
+    }
+
+    private async Task ShowCodeModal()
+    {
+        generatedCode = GeneratePortfolioHTML();
+        if (codeModal != null)
+            await codeModal.Show();
+    }
+
+    private async Task ShowDeployGuide()
+    {
+        if (deployModal != null)
+            await deployModal.Show();
+    }
+
+    private async Task CopyCodeToClipboard()
+    {
+        if (!string.IsNullOrEmpty(generatedCode))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", generatedCode);
+        }
+    }
+
+    public async Task<bool> ValidateAndSave()
+    {
+        await OnValidationChanged.InvokeAsync(true);
+        return true;
+    }
+
+    private string GeneratePortfolioHTML()
+    {
+        var data = StateService.Data;
+        var primary = data.CustomColors.Primary;
+        var secondary = data.CustomColors.Secondary;
+        var accent = data.CustomColors.Accent;
+        var bg = data.CustomColors.Background;
+        var text = data.CustomColors.Text;
+
+        var skillsHtml = "";
+        foreach (var skill in data.Skills)
+        {
+            skillsHtml += $"<span class='skill'>{skill}</span>";
+        }
+
+        var projectsHtml = "";
+        foreach (var p in data.Projects)
+        {
+            var techBadges = "";
+            foreach (var tech in p.Technologies.Split(',').Select(t => t.Trim()).Where(t => !string.IsNullOrEmpty(t)))
+            {
+                techBadges += $"<span>{tech}</span>";
+            }
+
+            var githubBtn = "";
+            if (!string.IsNullOrEmpty(p.GitHubUrl))
+            {
+                githubBtn = $"<a href='{p.GitHubUrl}' class='btn'>View Code</a>";
+            }
+
+            var demoBtn = "";
+            if (!string.IsNullOrEmpty(p.DemoUrl))
+            {
+                demoBtn = $"<a href='{p.DemoUrl}' class='btn btn-demo'>Live Demo</a>";
+            }
+
+            var projectImage = "";
+            if (!string.IsNullOrEmpty(p.ImageUrl))
+            {
+                projectImage = $"<img src='{p.ImageUrl}' alt='{p.Title}' />";
+            }
+
+            projectsHtml += $"<div class='project'>{projectImage}<h3>{p.Title}</h3><p>{p.Description}</p><div class='tech'>{techBadges}</div>{githubBtn}{demoBtn}</div>";
+        }
+
+        var aboutSection = "";
+        if (!string.IsNullOrEmpty(data.About))
+        {
+            aboutSection = $"<p class='about'>{data.About}</p>";
+        }
+
+        var skillsSection = "";
+        if (data.Skills.Any())
+        {
+            skillsSection = $"<section class='skills'>{skillsHtml}</section>";
+        }
+
+        var githubLink = "";
+        if (!string.IsNullOrEmpty(data.GitHubUrl))
+        {
+            githubLink = $"<a href='{data.GitHubUrl}'>GitHub</a>";
+        }
+
+        var linkedinLink = "";
+        if (!string.IsNullOrEmpty(data.LinkedInUrl))
+        {
+            linkedinLink = $"<a href='{data.LinkedInUrl}'>LinkedIn</a>";
+        }
+
+        var contactLink = "";
+        if (!string.IsNullOrEmpty(data.Email))
+        {
+            contactLink = $"<a href='mailto:{data.Email}'>Contact</a>";
+        }
+
+        var darkClass = (data.SelectedTheme == "dark" || data.SelectedTheme == "creative") ? "dark" : "";
+
+        var profileImage = "";
+        if (!string.IsNullOrEmpty(data.ProfileImage))
+        {
+            profileImage = $"\u003cimg src='{data.ProfileImage}' alt='{data.FullName}' class='profile-img' /\u003e";
+        }
+
+        return $@"<!DOCTYPE html><html lang='en' class='{darkClass}'><head><meta charset='UTF-8' /><meta name='viewport' content='width=device-width, initial-scale=1.0' /><title>{data.FullName} - {data.Title}</title><style>:root{{--primary:{primary};--secondary:{secondary};--accent:{accent};--bg:{bg};--text:{text};}}*{{margin:0;padding:0;box-sizing:border-box;}}body{{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;}}.container{{max-width:1200px;margin:0 auto;padding:2rem;}}header{{text-align:center;padding:4rem 0;}}h1{{font-size:3rem;color:var(--primary);margin-bottom:0.5rem;}}h2{{color:var(--secondary);font-weight:400;}}.profile-img{{width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid var(--secondary);margin-bottom:1.5rem;}}.about{{max-width:600px;margin:2rem auto;text-align:center;opacity:0.8;}}.links{{display:flex;justify-content:center;gap:1rem;margin-top:2rem;}}.links a{{padding:0.75rem 1.5rem;background:var(--primary);color:white;text-decoration:none;border-radius:8px;transition:transform 0.2s;}}.links a:hover{{transform:translateY(-2px);}}.skills{{display:flex;flex-wrap:wrap;justify-content:center;gap:0.5rem;margin:3rem 0;}}.skill{{padding:0.5rem 1rem;background:var(--secondary);color:white;border-radius:20px;font-size:0.9rem;}}.projects{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:2rem;}}.project{{background:rgba(0,0,0,0.03);padding:1.5rem;border-radius:12px;border:1px solid rgba(0,0,0,0.1);}}.project img{{width:100%;height:200px;object-fit:cover;border-radius:8px;margin-bottom:1rem;}}.project h3{{color:var(--primary);margin-bottom:1rem;}}.tech{{display:flex;flex-wrap:wrap;gap:0.5rem;margin:1rem 0;}}.tech span{{padding:0.25rem 0.75rem;background:var(--accent);color:white;border-radius:15px;font-size:0.8rem;}}.btn{{display:inline-block;padding:0.5rem 1rem;background:var(--primary);color:white;text-decoration:none;border-radius:6px;margin-right:0.5rem;margin-top:0.5rem;}}.btn-demo{{background:var(--secondary);}}footer{{text-align:center;padding:2rem;margin-top:4rem;opacity:0.6;border-top:1px solid rgba(0,0,0,0.1);}}@media (max-width:768px){{h1{{font-size:2rem;}}}}</style></head><body><div class='container'><header>{profileImage}<h1>{data.FullName}</h1><h2>{data.Title}</h2>{aboutSection}<div class='links'>{githubLink}{linkedinLink}{contactLink}</div></header>{skillsSection}<section class='projects'>{projectsHtml}</section><footer>&copy; 2025 {data.FullName}. Built with AI Portfolio Generator.</footer></div></body></html>";
+    }
+}

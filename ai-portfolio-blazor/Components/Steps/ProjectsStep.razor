@@ -1,0 +1,391 @@
+@using AIPortfolioGenerator.Models
+@using AIPortfolioGenerator.Services
+@inject PortfolioStateService StateService
+@inject AIService AIService
+@inject IJSRuntime JSRuntime
+
+<div class="step-content">
+    <div class="wizard-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5>Your Projects</h5>
+                <p class="section-desc" style="margin-bottom: 0;">Add your projects. AI can help enhance descriptions.</p>
+            </div>
+            <Button Color="Color.Primary" Clicked="ShowAddProjectModal">
+                <Icon Name="IconName.Plus" /> Add Project
+            </Button>
+        </div>
+
+        @if (projects.Count == 0)
+        {
+            <Alert Color="Color.Info">
+                <AlertMessage>No projects yet</AlertMessage>
+                <AlertDescription>Add your first project to get started.</AlertDescription>
+            </Alert>
+        }
+        else
+        {
+            <div class="row">
+                @foreach (var project in projects)
+                {
+                    <div class="col-md-6 mb-3">
+                        <div class="project-card">
+                            @if (!string.IsNullOrEmpty(project.ImageBase64))
+                            {
+                                <img src="@project.ImageBase64" alt="@project.Title" class="project-card-img" />
+                            }
+                            else
+                            {
+                                <div class="project-card-placeholder">
+                                    <Icon Name="IconName.Image" Style="font-size: 2rem; color: #9ca3af;" />
+                                </div>
+                            }
+                            <div class="project-card-body">
+                                <h6 class="project-card-title">@project.Title</h6>
+                                <p class="project-card-desc">@(string.IsNullOrEmpty(project.Description) ? "No description" : project.Description.Length > 80 ? project.Description[..80] + "..." : project.Description)</p>
+                                <div class="project-card-tech">
+                                    @foreach (var tech in project.Technologies.Split(',').Select(t => t.Trim()).Where(t => !string.IsNullOrEmpty(t)).Take(3))
+                                    {
+                                        <span class="tech-badge">@tech</span>
+                                    }
+                                </div>
+                                <div class="project-card-actions">
+                                    <Button Color="Color.Secondary" Size="Size.Small" Clicked="() => ShowEditProjectModal(project)">
+                                        <Icon Name="IconName.Edit" /> Edit
+                                    </Button>
+                                    <Button Color="Color.Danger" Size="Size.Small" Clicked="() => DeleteProject(project)">
+                                        <Icon Name="IconName.Delete" /> Delete
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Project Modal (Add/Edit) -->
+<Modal @ref="projectModal" Size="ModalSize.Large">
+    <ModalContent Centered="true">
+        <ModalHeader>
+            <ModalTitle>@(isEditing ? "Edit Project" : "Add New Project")</ModalTitle>
+            <CloseButton Clicked="() => projectModal.Hide()" />
+        </ModalHeader>
+        <ModalBody>
+            @if (saveSuccess)
+            {
+                <Alert Color="Color.Success" Margin="Margin.Is3.FromBottom">
+                    <AlertMessage>Project saved successfully!</AlertMessage>
+                </Alert>
+            }
+
+            <div class="mb-3">
+                <label class="form-label">Project Title *</label>
+                <input type="text" class="form-control" @bind="editingProject.Title" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">
+                    Description
+                    <Button Color="Color.Primary" Size="Size.Small" Clicked="EnhanceEditingDescription" Loading="isEnhancingDescription" Margin="Margin.Is2.FromStart">
+                        AI Enhance
+                    </Button>
+                </label>
+                <textarea class="form-control" @bind="editingProject.Description" rows="3"></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Project Image</label>
+                <div class="d-flex align-items-center gap-3">
+                    @if (!string.IsNullOrEmpty(editingProject.ImageBase64))
+                    {
+                        <img src="@editingProject.ImageBase64" alt="Project Preview" style="width: 120px; height: 80px; object-fit: cover; border-radius: 8px;" />
+                        <Button Color="Color.Danger" Size="Size.Small" Clicked="RemoveEditingImage">
+                            <Icon Name="IconName.Delete" /> Remove
+                        </Button>
+                    }
+                    else
+                    {
+                        <div style="width: 120px; height: 80px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                            <Icon Name="IconName.Image" Style="font-size: 1.5rem; color: #9ca3af;" />
+                        </div>
+                    }
+                    <InputFile OnChange="OnEditingImageSelected" accept=".jpg,.jpeg,.png,.gif" class="form-control" style="max-width: 200px;" />
+                </div>
+                <small class="text-muted">JPG, PNG, GIF up to 2MB</small>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Technologies (comma-separated)</label>
+                <input type="text" class="form-control" @bind="editingProject.Technologies" placeholder="React, Node.js, MongoDB..." />
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">GitHub URL</label>
+                    <input type="url" class="form-control" @bind="editingProject.GitHubUrl" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Demo URL</label>
+                    <input type="url" class="form-control" @bind="editingProject.DemoUrl" />
+                </div>
+            </div>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Secondary" Clicked="() => projectModal.Hide()">Cancel</Button>
+            <Button Color="Color.Primary" Clicked="SaveProject">
+                <Icon Name="IconName.Save" /> @(isEditing ? "Update Project" : "Add Project")
+            </Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
+@code {
+    [Parameter] public EventCallback<bool> OnValidationChanged { get; set; }
+
+    private List<EditableProject> projects = new();
+    private Modal projectModal = null!;
+    private EditableProject editingProject = new() { Id = Guid.NewGuid() };
+    private bool isEditing;
+    private bool isEnhancingDescription;
+    private bool saveSuccess;
+
+    protected override void OnInitialized()
+    {
+        projects = StateService.Data.Projects.Select(p => new EditableProject
+        {
+            Id = p.Id,
+            Title = p.Title,
+            Description = p.Description,
+            Technologies = p.Technologies,
+            GitHubUrl = p.GitHubUrl,
+            DemoUrl = p.DemoUrl,
+            ImageBase64 = p.ImageUrl
+        }).ToList();
+    }
+
+    private void ShowAddProjectModal()
+    {
+        isEditing = false;
+        saveSuccess = false;
+        editingProject = new EditableProject { Id = Guid.NewGuid() };
+        projectModal.Show();
+    }
+
+    private void ShowEditProjectModal(EditableProject project)
+    {
+        isEditing = true;
+        saveSuccess = false;
+        editingProject = new EditableProject
+        {
+            Id = project.Id,
+            Title = project.Title,
+            Description = project.Description,
+            Technologies = project.Technologies,
+            GitHubUrl = project.GitHubUrl,
+            DemoUrl = project.DemoUrl,
+            ImageBase64 = project.ImageBase64
+        };
+        projectModal.Show();
+    }
+
+    private async Task EnhanceEditingDescription()
+    {
+        if (string.IsNullOrWhiteSpace(editingProject.Title))
+        {
+            editingProject.Description = "Please enter a project title first.";
+            StateHasChanged();
+            return;
+        }
+
+        isEnhancingDescription = true;
+
+        try
+        {
+            var result = await AIService.EnhanceDescriptionAsync(
+                editingProject.Title,
+                editingProject.Description,
+                editingProject.Technologies);
+
+            editingProject.Description = result;
+        }
+        catch (Exception ex)
+        {
+            editingProject.Description = $"Error: {ex.Message}";
+        }
+
+        isEnhancingDescription = false;
+        StateHasChanged();
+    }
+
+    private async Task SaveProject()
+    {
+        if (string.IsNullOrWhiteSpace(editingProject.Title))
+            return;
+
+        var projectData = new Project
+        {
+            Id = editingProject.Id,
+            Title = editingProject.Title,
+            Description = editingProject.Description,
+            Technologies = editingProject.Technologies,
+            GitHubUrl = editingProject.GitHubUrl,
+            DemoUrl = editingProject.DemoUrl,
+            ImageUrl = editingProject.ImageBase64 ?? ""
+        };
+
+        if (isEditing)
+        {
+            StateService.UpdateProject(projectData);
+            var existing = projects.FirstOrDefault(p => p.Id == editingProject.Id);
+            if (existing != null)
+            {
+                existing.Title = editingProject.Title;
+                existing.Description = editingProject.Description;
+                existing.Technologies = editingProject.Technologies;
+                existing.GitHubUrl = editingProject.GitHubUrl;
+                existing.DemoUrl = editingProject.DemoUrl;
+                existing.ImageBase64 = editingProject.ImageBase64;
+            }
+        }
+        else
+        {
+            StateService.AddProject(projectData);
+            projects.Add(new EditableProject
+            {
+                Id = editingProject.Id,
+                Title = editingProject.Title,
+                Description = editingProject.Description,
+                Technologies = editingProject.Technologies,
+                GitHubUrl = editingProject.GitHubUrl,
+                DemoUrl = editingProject.DemoUrl,
+                ImageBase64 = editingProject.ImageBase64
+            });
+        }
+
+        saveSuccess = true;
+        await projectModal.Hide();
+        StateHasChanged();
+    }
+
+    private void DeleteProject(EditableProject project)
+    {
+        projects.Remove(project);
+        StateService.RemoveProject(project.Id);
+        StateHasChanged();
+    }
+
+    private async Task OnEditingImageSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        if (file.Size > 2 * 1024 * 1024)
+            return;
+
+        using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        var base64 = Convert.ToBase64String(ms.ToArray());
+        editingProject.ImageBase64 = $"data:{file.ContentType};base64,{base64}";
+        StateHasChanged();
+    }
+
+    private void RemoveEditingImage()
+    {
+        editingProject.ImageBase64 = null;
+        StateHasChanged();
+    }
+
+    public async Task<bool> ValidateAndSave()
+    {
+        await OnValidationChanged.InvokeAsync(true);
+        return true;
+    }
+
+    public class EditableProject
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Technologies { get; set; } = "";
+        public string GitHubUrl { get; set; } = "";
+        public string DemoUrl { get; set; } = "";
+        public string? ImageBase64 { get; set; }
+    }
+}
+
+<style>
+    .project-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        overflow: hidden;
+        transition: box-shadow 0.2s;
+        display: flex;
+    }
+
+    .project-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .project-card-img {
+        width: 180px;
+        height: 140px;
+        object-fit: contain;
+        flex-shrink: 0;
+        background: #f8f9fb;
+    }
+
+    .project-card-placeholder {
+        width: 180px;
+        height: 140px;
+        background: #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .project-card-body {
+        padding: 1rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .project-card-title {
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 0.5rem;
+    }
+
+    .project-card-desc {
+        font-size: 0.8125rem;
+        color: #64748b;
+        margin-bottom: 0.75rem;
+    }
+
+    .project-card-tech {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .tech-badge {
+        background: #e2e8f0;
+        color: #475569;
+        padding: 0.125rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+
+    .project-card-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+</style>

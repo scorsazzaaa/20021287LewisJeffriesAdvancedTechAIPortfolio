@@ -1,0 +1,96 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "AIPortfolioGenerator/1.0.0": {
+        "dependencies": {
+          "Blazorise.Bootstrap5": "2.1.0",
+          "Blazorise.Icons.FontAwesome": "2.1.0"
+        },
+        "runtime": {
+          "AIPortfolioGenerator.dll": {}
+        }
+      },
+      "Blazorise/2.1.0": {
+        "dependencies": {
+          "Blazorise.Licensing": "1.3.0"
+        },
+        "runtime": {
+          "lib/net10.0/Blazorise.dll": {
+            "assemblyVersion": "2.1.0.0",
+            "fileVersion": "2.1.0.0"
+          }
+        }
+      },
+      "Blazorise.Bootstrap5/2.1.0": {
+        "dependencies": {
+          "Blazorise": "2.1.0"
+        },
+        "runtime": {
+          "lib/net10.0/Blazorise.Bootstrap5.dll": {
+            "assemblyVersion": "2.1.0.0",
+            "fileVersion": "2.1.0.0"
+          }
+        }
+      },
+      "Blazorise.Icons.FontAwesome/2.1.0": {
+        "dependencies": {
+          "Blazorise": "2.1.0"
+        },
+        "runtime": {
+          "lib/net10.0/Blazorise.Icons.FontAwesome.dll": {
+            "assemblyVersion": "2.1.0.0",
+            "fileVersion": "2.1.0.0"
+          }
+        }
+      },
+      "Blazorise.Licensing/1.3.0": {
+        "runtime": {
+          "lib/net9.0/Blazorise.Licensing.dll": {
+            "assemblyVersion": "1.3.0.0",
+            "fileVersion": "1.3.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "AIPortfolioGenerator/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Blazorise/2.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-0qGUaZNcwtJtxLOUEMRKMN5xfRzsjb6vi/RLGmEIZ/5fZxW4C3IaVz/wgRhE5WwDcjGMUjSneTcfs598nTCamg==",
+      "path": "blazorise/2.1.0",
+      "hashPath": "blazorise.2.1.0.nupkg.sha512"
+    },
+    "Blazorise.Bootstrap5/2.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-27eXWz78u0YuZWSssLJXDL8/SUQt3nhlaE34ywcmxndvy0ATKPb64+HlbJuQLhQpQ6ZvoXshhaevcHnt2Flang==",
+      "path": "blazorise.bootstrap5/2.1.0",
+      "hashPath": "blazorise.bootstrap5.2.1.0.nupkg.sha512"
+    },
+    "Blazorise.Icons.FontAwesome/2.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Aq7kBWlc/Pn53qvbKRomXzthC4MH6a1lGTDaASjF6Q22xSHxlbk4FJzgio3BJURPyFqxnuZLLrOTljxQBFpP9A==",
+      "path": "blazorise.icons.fontawesome/2.1.0",
+      "hashPath": "blazorise.icons.fontawesome.2.1.0.nupkg.sha512"
+    },
+    "Blazorise.Licensing/1.3.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-NvQlbUgd6jY/ZfkJPlhHLaMVyvfp24OMehFV8Y6mrqLHqC0CfcoE+6+YP9FZMZKNAWmcNZ85WXmYFWVl0UXGfw==",
+      "path": "blazorise.licensing/1.3.0",
+      "hashPath": "blazorise.licensing.1.3.0.nupkg.sha512"
+    }
+  }
+}

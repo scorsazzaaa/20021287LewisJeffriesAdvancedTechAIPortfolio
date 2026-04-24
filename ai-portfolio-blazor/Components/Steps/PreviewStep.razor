@@ -1,0 +1,114 @@
+@using AIPortfolioGenerator.Models
+@using AIPortfolioGenerator.Services
+@inject PortfolioStateService StateService
+@inject IJSRuntime JSRuntime
+
+<div class="step-content">
+    <div class="wizard-section">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h5>Portfolio Preview</h5>
+                <p class="section-desc" style="margin-bottom: 0;">Here's your generated portfolio</p>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                @if (StateService.Data.AIEnhanced)
+                {
+                    <Badge Color="Color.Success" Padding="Padding.Is2">AI Enhanced</Badge>
+                }
+            </div>
+        </div>
+
+        <div id="portfolio-preview-container">
+            @((MarkupString)RenderPreview())
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<bool> OnValidationChanged { get; set; }
+
+    private string selectedLayout = "standard";
+
+    protected override void OnInitialized()
+    {
+        selectedLayout = StateService.Data.LayoutStyle;
+    }
+
+    private string RenderPreview()
+    {
+        var data = StateService.Data;
+        var primary = data.CustomColors.Primary;
+        var secondary = data.CustomColors.Secondary;
+        var accent = data.CustomColors.Accent;
+        var bg = data.CustomColors.Background;
+        var text = data.CustomColors.Text;
+
+        var skillsHtml = "";
+        foreach (var s in data.Skills)
+        {
+            skillsHtml += $"<span style='background:{secondary};color:white;padding:0.5rem 1rem;border-radius:20px;margin:0.25rem;display:inline-block;'>{s}</span>";
+        }
+
+        var projectsHtml = "";
+        foreach (var p in data.Projects)
+        {
+            var techBadges = "";
+            foreach (var t in p.Technologies.Split(',').Select(t => t.Trim()).Where(t => !string.IsNullOrEmpty(t)))
+            {
+                techBadges += $"<span style='background:{accent};color:white;padding:0.25rem 0.75rem;border-radius:15px;margin:0.125rem;font-size:0.8rem;display:inline-block;'>{t}</span>";
+            }
+
+            var githubBtn = string.IsNullOrEmpty(p.GitHubUrl) ? "" :
+                $"<a href='{p.GitHubUrl}' style='background:{primary};color:white;padding:0.5rem 1rem;border-radius:6px;text-decoration:none;display:inline-block;margin-right:0.5rem;'>View Code</a>";
+
+            var demoBtn = string.IsNullOrEmpty(p.DemoUrl) ? "" :
+                $"<a href='{p.DemoUrl}' style='background:{secondary};color:white;padding:0.5rem 1rem;border-radius:6px;text-decoration:none;display:inline-block;'>Live Demo</a>";
+
+            var projectImage = string.IsNullOrEmpty(p.ImageUrl) ? "" :
+                $"<div style='flex: 0 0 200px; display: flex; align-items: center; justify-content: center; background: #f8f9fb; border-radius: 8px;'><img src='{p.ImageUrl}' alt='{p.Title}' style='max-width: 200px; max-height: 150px; object-fit: contain;' /></div>";
+
+            var projectContent = $"<div style='flex: 1;'><h3 style='color:{primary};margin-bottom:0.75rem;'>{p.Title}</h3><p style='color:{text};margin-bottom:1rem;font-size:0.9rem;'>{p.Description}</p><div style='margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:0.25rem;'>{techBadges}</div><div style='display:flex;gap:0.5rem;'>{githubBtn}{demoBtn}</div></div>";
+
+            projectsHtml += $"<div style='background:rgba(0,0,0,0.03);padding:1.5rem;border-radius:12px;border:1px solid rgba(0,0,0,0.1);margin-bottom:1rem;display:flex;gap:1rem;align-items:center;flex:1 1 calc(50% - 1rem);min-width:300px;'>{projectImage}{projectContent}</div>";
+        }
+
+        var layoutStyle = selectedLayout switch
+        {
+            "focused" => "flex-direction:column;",
+            "grid" => "display:flex;flex-wrap:wrap;gap:1.5rem;",
+            "masonry" => "display:flex;flex-wrap:wrap;gap:1rem;",
+            _ => "display:flex;flex-wrap:wrap;gap:1.5rem;"
+        };
+
+        var githubLink = string.IsNullOrEmpty(data.GitHubUrl) ? "" :
+            $"<a href='{data.GitHubUrl}' style='background:{primary};color:white;padding:0.75rem 1.5rem;border-radius:8px;text-decoration:none;'>GitHub</a>";
+
+        var linkedinLink = string.IsNullOrEmpty(data.LinkedInUrl) ? "" :
+            $"<a href='{data.LinkedInUrl}' style='background:{secondary};color:white;padding:0.75rem 1.5rem;border-radius:8px;text-decoration:none;'>LinkedIn</a>";
+
+        var contactLink = string.IsNullOrEmpty(data.Email) ? "" :
+            $"<a href='mailto:{data.Email}' style='background:{accent};color:white;padding:0.75rem 1.5rem;border-radius:8px;text-decoration:none;'>Contact</a>";
+
+        var aboutSection = string.IsNullOrEmpty(data.About) ? "" :
+            $"<p style='max-width:600px;margin:2rem auto;text-align:center;opacity:0.8;'>{data.About}</p>";
+
+        var profileImage = string.IsNullOrEmpty(data.ProfileImage) ? "" :
+            $"<img src='{data.ProfileImage}' alt='{data.FullName}' style='width:120px;height:120px;object-fit:cover;border-radius:50%;margin-bottom:1.5rem;border:4px solid {secondary};' />";
+
+        var skillsSection = data.Skills.Any() ?
+            $"<section style='margin:3rem 0;text-align:center;'><h2 style='color:{primary};margin-bottom:1.5rem;'>Skills</h2><div style='display:flex;flex-wrap:wrap;justify-content:center;gap:0.5rem;'>{skillsHtml}</div></section>" : "";
+
+        var darkClass = (data.SelectedTheme == "dark" || data.SelectedTheme == "creative") ? "dark" : "";
+
+        var projectsSection = data.Projects.Any() ?
+            $"<section style='margin-top:3rem;'><h2 style='text-align:center;color:{primary};margin-bottom:2rem;'>Projects</h2><div style='{layoutStyle}'>{projectsHtml}</div></section>" : "";
+
+        return $"<div style='background:{bg};border-radius:12px;overflow:hidden;font-family:sans-serif;'><div style='background:{primary};color:white;padding:1rem;display:flex;align-items:center;gap:0.5rem;'><span style='width:12px;height:12px;background:#ff5f57;border-radius:50%;display:inline-block;'></span><span style='width:12px;height:12px;background:#ffbd2e;border-radius:50%;display:inline-block;'></span><span style='width:12px;height:12px;background:#28c840;border-radius:50%;display:inline-block;'></span><span style='margin-left:auto;font-family:monospace;font-size:0.875rem;opacity:0.8;'>portfolio.demo</span></div><div style='padding:2rem;'><div style='text-align:center;padding:3rem 0;color:{text};'>{profileImage}<h1 style='font-size:3rem;color:{primary};margin-bottom:0.5rem;'>{data.FullName}</h1><h2 style='color:{secondary};font-weight:400;'>{data.Title}</h2>{aboutSection}<div style='display:flex;justify-content:center;gap:1rem;margin-top:2rem;'>{githubLink}{linkedinLink}{contactLink}</div></div>{skillsSection}{projectsSection}<div style='text-align:center;padding:2rem;margin-top:3rem;border-top:1px solid {secondary};opacity:0.6;color:{text};'>&copy; 2025 {data.FullName}. Built with AI Portfolio Generator.</div></div></div>";
+    }
+
+    public async Task<bool> ValidateAndSave()
+    {
+        await OnValidationChanged.InvokeAsync(true);
+        return true;
+    }
+}

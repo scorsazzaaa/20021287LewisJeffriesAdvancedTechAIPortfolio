@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "dgSpecHash": "OPvIRtFuEHA=",
+  "success": true,
+  "projectFilePath": "/Users/lewis/Projects/ai-portfolio-blazor/AIPortfolioGenerator.csproj",
+  "expectedPackageFiles": [
+    "/Users/lewis/.nuget/packages/blazorise/2.1.0/blazorise.2.1.0.nupkg.sha512",
+    "/Users/lewis/.nuget/packages/blazorise.bootstrap5/2.1.0/blazorise.bootstrap5.2.1.0.nupkg.sha512",
+    "/Users/lewis/.nuget/packages/blazorise.icons.fontawesome/2.1.0/blazorise.icons.fontawesome.2.1.0.nupkg.sha512",
+    "/Users/lewis/.nuget/packages/blazorise.licensing/1.3.0/blazorise.licensing.1.3.0.nupkg.sha512",
+    "/Users/lewis/.nuget/packages/microsoft.aspnetcore.app.internal.assets/10.0.6/microsoft.aspnetcore.app.internal.assets.10.0.6.nupkg.sha512"
+  ],
+  "logs": []
+}

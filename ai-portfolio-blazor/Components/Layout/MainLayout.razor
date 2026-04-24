@@ -1,0 +1,58 @@
+@using Blazorise
+@inherits LayoutComponentBase
+
+<Blazorise.ThemeProvider Theme="@theme">
+    <Layout>
+        <LayoutHeader Fixed="true">
+            <Bar Breakpoint="Breakpoint.Desktop"
+                 Background="Background.Dark"
+                 ThemeContrast="ThemeContrast.Light"
+                 Mode="BarMode.Horizontal"
+                 CollapseMode="BarCollapseMode.Small">
+                <BarBrand>
+                    <BarItem Class="d-flex align-items-center gap-2">
+                        <img src="/images/UWE_Bristol_logo.svg.png" alt="UWE Logo" style="height: 32px; width: auto;" />
+                        <div class="d-flex flex-column" style="line-height: 1.1;">
+                            <Span Size="Size.Medium" Weight="TextWeight.SemiBold" Style="letter-spacing: -0.01em; color: white;">Lewis Jeffries</Span>
+                            <small style="opacity: 0.7; font-size: 0.7rem; color: white;">20021287</small>
+                        </div>
+                    </BarItem>
+                </BarBrand>
+                <BarToggler />
+            </Bar>
+        </LayoutHeader>
+
+        <LayoutContent Padding="Padding.Is0">
+            <div class="page-background">
+                @Body
+            </div>
+        </LayoutContent>
+
+            </Layout>
+</Blazorise.ThemeProvider>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private Theme theme = new()
+    {
+        ColorOptions = new()
+        {
+            Primary = "#2563eb",
+            Secondary = "#475569",
+            Success = "#059669",
+            Info = "#0284c7",
+            Warning = "#d97706",
+            Danger = "#dc2626",
+        },
+        BackgroundOptions = new()
+        {
+            Light = "#f8f9fb",
+            Dark = "#0f172a",
+        }
+    };
+}
